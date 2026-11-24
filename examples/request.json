@@ -1,0 +1,16 @@
+{
+  "streams": {
+    "stream_a": ["a1", "a2", "a3", "a4"],
+    "stream_b": ["b1", "b2", "b3", "b4"]
+  },
+  "waits": [
+    {"waiter": "b2", "waitee": "a2"}
+  ],
+  "tensors": [
+    {"name": "T1", "producer": "a1", "consumers": ["a2"], "size_bytes": 1024, "alignment": 256},
+    {"name": "T2", "producer": "a2", "consumers": ["a3", "b2"], "size_bytes": 2048, "alignment": 512},
+    {"name": "T3", "producer": "b1", "consumers": ["b3"], "size_bytes": 1536, "alignment": 256},
+    {"name": "T4", "producer": "a3", "consumers": ["a4"], "size_bytes": 768, "alignment": 128}
+  ],
+  "budget_bytes": 4096
+}
