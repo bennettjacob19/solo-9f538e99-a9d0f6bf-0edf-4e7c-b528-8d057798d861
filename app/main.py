@@ -6,8 +6,8 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
+from .planner.caching import PlannerCache
 from .planner.models import PlanningError, PlanningInput, TensorSpec, Wait
-from .planner.service import plan
 
 app = FastAPI(
     title="CUDA 双流显存离线规划接口",
@@ -15,8 +15,13 @@ app = FastAPI(
     description=(
         "给定两条 CUDA 流的算子顺序、跨流等待与张量生命周期，"
         "在显存预算内规划各张量的字节偏移；必要时新增一条不成环的跨流等待。"
+        "按流内位置对应算子后仅差算子名或显存预算的请求会共享同一份求解，"
+        "各请求的响应与独立求解完全一致。"
     ),
 )
+
+# 单进程级缓存：按拓扑共享原布局与候选等待的求解（详见 app/planner/caching.py）
+_cache = PlannerCache()
 
 
 class WaitIn(BaseModel):
@@ -85,7 +90,7 @@ def health() -> dict[str, str]:
 def post_plan(req: PlanRequest) -> PlanResponse | JSONResponse:
     data = _to_internal(req)
     try:
-        outcome = plan(data)
+        outcome = _cache.plan(data)
     except PlanningError as exc:
         # 输入不合法（结构问题由 pydantic 拦截，这里是语义校验失败）
         return JSONResponse(status_code=422, content={"detail": str(exc)})
